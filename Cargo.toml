@@ -1,0 +1,15 @@
+[package]
+name = "gifp4"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+sled = { version = "0.34", features = ["compression"] }
+rand = "0.8"
+base64 = "0.13"
+hyper = { version = "0.14", features = ["server", "http2", "tcp", "http1"] }
+warp = "0.3"
+tokio = { version = "1", features = ["macros","rt-multi-thread"] }
+http-body = "0.4"
