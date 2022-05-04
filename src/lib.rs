@@ -175,7 +175,7 @@ async fn submit_request(db: &Db, req: Request<Body>) -> Result<Response<MyBody>,
 }
 
 static P1: &'static str = &r#"<!DOCTYPE html><html><head><meta property="og:image" content="https://cdn.discordapp.com/attachments/"#;
-static P2: &'static str = &r#""><meta property="og:type" content="video.other"><meta property="og:video:url" content="https://cdn.discordapp.com/attachments/"#;
+static P2: &'static str = &r#""><meta property="og:image:type" content="image/gif"><meta property="og:image:height" content="202"><meta property="og:image:width" content="250"><meta property="og:type" content="video.other"><meta property="og:video:url" content="https://cdn.discordapp.com/attachments/"#;
 static P3: &'static str = &r#""><meta property="og:video:height" content="202"><meta property="og:video:width" content="250"></head><body><h1><a href="submit">Submit a link</a></h1></body></html>"#;
 
 fn make_page_response(gif: IString, mp4: IString) -> impl Buf + 'static + Send + Sync {
