@@ -1,5 +1,22 @@
 use sled::{Batch, Db, IVec};
 use std::str::Utf8Error;
+use http_body::{combinators::BoxBody, Full};
+use hyper::service::{make_service_fn, service_fn};
+use hyper::Uri;
+use hyper::{
+    body::{Buf, Bytes, HttpBody},
+    service::Service,
+    header::CONTENT_TYPE,
+    Body, Method, Request, Response, Server, StatusCode,
+};
+use std::convert::Infallible;
+use std::net::SocketAddr;
+use std::collections::HashMap;
+use warp::Filter;
+use warp::Reply;
+use std::io::Cursor;
+
+
 
 type ID = [u8; 6];
 
@@ -83,18 +100,6 @@ fn lookup(db: &Db, id: &ID) -> sled::Result<Option<(IString, IString)>> {
     Ok(Some((gif, mp4)))
 }
 
-use http_body::{combinators::BoxBody, Full};
-use hyper::service::{make_service_fn, service_fn};
-use hyper::Uri;
-use hyper::{
-    body::{Buf, Bytes, HttpBody},
-    service::Service,
-    header::CONTENT_TYPE,
-    Body, Method, Request, Response, Server, StatusCode,
-};
-use std::convert::Infallible;
-use std::net::SocketAddr;
-
 type MyBody = BoxBody<Box<dyn Buf + 'static + Send + Sync>, hyper::Error>;
 
 async fn serve(db: &Db, req: Request<Body>) -> Result<Response<MyBody>, hyper::Error> {
@@ -114,10 +119,6 @@ async fn serve(db: &Db, req: Request<Body>) -> Result<Response<MyBody>, hyper::E
         resp
     })
 }
-
-use std::collections::HashMap;
-use warp::Filter;
-use warp::Reply;
 
 async fn submit_request(db: &Db, req: Request<Body>) -> Result<Response<MyBody>, hyper::Error> {
     let route = warp::body::content_length_limit(1024)
@@ -159,9 +160,7 @@ async fn submit_request(db: &Db, req: Request<Body>) -> Result<Response<MyBody>,
 
 static P1: &'static str = &r#"<!DOCTYPE html><html><head><meta property="og:image" content="https://cdn.discordapp.com/attachments/"#;
 static P2: &'static str = &r#""><meta property="og:type" content="video.other"><meta property="og:video:url" content="https://cdn.discordapp.com/attachments/"#;
-static P3: &'static str = &r#""><meta property="og:video:height" content="202"><meta property="og:video:width" content="250"></head><body><img src="https://cdn.discordapp.com/attachments/963891685471957103/967247400840335410/trollface_PNG30.png"></body></html>"#;
-
-use std::io::Cursor;
+static P3: &'static str = &r#""><meta property="og:video:height" content="202"><meta property="og:video:width" content="250"></head><body><h1><a href="submit">Submit a link</a></h1></body></html>"#;
 
 fn make_page_response(gif: IString, mp4: IString) -> impl Buf + 'static + Send + Sync {
     P1.as_bytes()
@@ -196,21 +195,14 @@ fn not_found() -> Result<Response<MyBody>, hyper::Error> {
     Ok(resp)
 }
 
-fn database() -> sled::Result<Db> {
+pub fn database() -> sled::Result<Db> {
     sled::Config::new().path("gifp4_db").open()
 }
 
-#[tokio::main]
-async fn main() {
-    println!("Hello, world!");
-    let addr = SocketAddr::from(([127, 0, 0, 1], 4312));
-    let db: &'static Db = Box::leak(Box::new(database().expect("Unable to open DB")));
-
+pub async fn start_server(db: &'static Db, addr: SocketAddr) -> Result<(), hyper::Error> {
     let make_svc =
         make_service_fn(|_conn| async { Ok::<_, hyper::Error>(service_fn(|r| serve(db, r))) });
     let server = Server::bind(&addr).serve(make_svc);
 
-    if let Err(e) = server.await {
-        eprintln!("Server error: {}", e);
-    }
+    server.await
 }
