@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Discord stacked meme generator</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="1.css" />
+    <link rel="stylesheet" href="2.css" />
+    <style>
+        h1 {
+            text-align: center;
+            font-size: 3em;
+        }
+        
+        h2 {
+            text-align: center;
+            font-size: 2em;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="pure-g">
+        <div class="pure-u-1-24 pure-u-md-1-6 pure-u-lg-1-4"></div>
+        <div class="pure-u-22-24 pure-u-md-2-3 pure-u-lg-1-2">
+            <h1>discord stacked meme generator</h1>
+            <br>
+            <br>
+            <form class="pure-form pure-form-aligned" action="/submit" method="post">
+                <fieldset>
+                    <div class="pure-control-group">
+                        <input class="pure-input-1" type="text" id="preview" placeholder="preview url" required="" />
+                        <span id="suffix-warning-1" class="pure-form-message" hidden>links must be a discordapp link</span>
+                    </div>
+                    <div class="pure-control-group">
+                        <input class="pure-input-1" type="text" id="content" placeholder="content url" required="" />
+                        <span id="suffix-warning-2" class="pure-form-message" hidden>links must be a discordapp link</span>
+                    </div>
+                    <br>
+                    <button id="submit-button" type="submit" class="pure-button pure-button-primary pure-input-1" disabled>submit</button>
+                </fieldset>
+                <p id="x"></p>
+            </form>
+        </div>
+        <div class="pure-u-1-24 pure-u-md-1-6 pure-u-lg-1-4"></div>
+    </div>
+</body>
+<script>
+    let previewField = document.getElementById("preview");
+    let contentField = document.getElementById("content");
+    let warning_1 = document.getElementById("suffix-warning-1");
+    let warning_2 = document.getElementById("suffix-warning-2");
+    let submitButton = document.getElementById("submit-button");
+
+    let good_link_prefixes = [
+        "cdn.discordapp.com/attachments",
+        "media.discordapp.net/attachments"
+    ];
+
+    function verifyLink(link) {
+        link = link.toLowerCase();
+        link = link.replace("https://", "");
+        for (let i = 0, prefix; prefix = good_link_prefixes[i]; i++) {
+            if (link.startsWith(prefix)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
+    let states = {
+        'preview': {
+            warning: warning_1,
+            good: false
+        },
+        'content': {
+            warning: warning_2,
+            good: false
+        }
+    };
+
+    previewField.addEventListener('input', verifyInput);
+    contentField.addEventListener('input', verifyInput);
+
+    function verifyInput(e) {
+        if (!verifyLink(this.value)) {
+            states[e.currentTarget.id].warning.removeAttribute("hidden");
+            states[e.currentTarget.id].good = false;
+        } else {
+            states[e.currentTarget.id].warning.setAttribute("hidden", "");
+            states[e.currentTarget.id].good = true;
+        }
+
+        updateSubmitButton();
+    }
+
+    function updateSubmitButton() {
+        if (states['preview'].good && states['content'].good) {
+            submitButton.removeAttribute("disabled");
+        } else {
+            submitButton.setAttribute("disabled", "");
+        }
+    }
+</script>
+
+</html>

@@ -97,6 +97,24 @@ use std::net::SocketAddr;
 
 type MyBody = BoxBody<Box<dyn Buf + 'static + Send + Sync>, hyper::Error>;
 
+fn set_ct(resp: Result<Response<MyBody>, hyper::Error>, ctype: &str) -> Result<Response<MyBody>, hyper::Error> {
+    resp.map(|mut resp| {
+        match ctype {
+            "html" => {
+                resp.headers_mut().insert(CONTENT_TYPE, "text/html; charset=utf-8".parse().unwrap());
+            }
+            "css" => {
+                resp.headers_mut().insert(CONTENT_TYPE, "text/css; charset=utf-8".parse().unwrap());
+            }
+            _ => {
+                eprintln!("Skill issue");
+            }
+        }
+
+        resp
+    })
+}
+
 async fn serve(db: &Db, req: Request<Body>) -> Result<Response<MyBody>, hyper::Error> {
     let id = req
         .uri()
@@ -105,14 +123,13 @@ async fn serve(db: &Db, req: Request<Body>) -> Result<Response<MyBody>, hyper::E
         .map(|s| s.split_once(".").map(|(p, _)| p).unwrap_or(s))
         .and_then(parse_id);
     match (req.method(), req.uri().path(), id) {
-        (&Method::GET, "/", None) => send_home(),
-        (&Method::POST, "/submit", None) => Ok(submit_request(db, req).await.unwrap()),
-        (&Method::GET, _, Some(id)) => Ok(generate_response(db, &id).await.unwrap()),
+        (&Method::GET, "/", None) => set_ct(send_home(), "html"),
+        (&Method::GET, "/1.css", None) => set_ct(send_css(1), "css"),
+        (&Method::GET, "/2.css", None) => set_ct(send_css(2), "css"),
+        (&Method::POST, "/submit", None) => set_ct(Ok(submit_request(db, req).await.unwrap()), "html"),
+        (&Method::GET, _, Some(id)) => set_ct(Ok(generate_response(db, &id).await.unwrap()), "html"),
         _ => not_found(),
-    }.map(|mut resp| {
-        resp.headers_mut().insert(CONTENT_TYPE, "text/html; charset=utf-8".parse().unwrap());
-        resp
-    })
+    }
 }
 
 use std::collections::HashMap;
@@ -178,7 +195,10 @@ async fn generate_response(db: &Db, id: &ID) -> Result<Response<MyBody>, ()> {
     )))
 }
 
-static HOME_PAGE: &'static str = include_str!("index.html");
+static HOME_PAGE: &'static str = include_str!("html/index.html");
+static CSS_1: &'static str = include_str!("css/pure-min.css");
+static CSS_2: &'static str = include_str!("css/grid-responsive-min.css");
+static NOT_FOUND: &'static str = include_str!("html/not_found.html");
 
 fn send_home() -> Result<Response<MyBody>, hyper::Error> {
     Ok(Response::new(BoxBody::new(
@@ -186,7 +206,26 @@ fn send_home() -> Result<Response<MyBody>, hyper::Error> {
     )))
 }
 
-static NOT_FOUND: &'static str = include_str!("not_found.html");
+fn send_css(sel: u8) -> Result<Response<MyBody>, hyper::Error> {
+    match sel {
+        1 => {
+            Ok(Response::new(BoxBody::new(
+                Full::new(Box::new(CSS_1.as_bytes()) as _).map_err(|_| todo!()),
+            )))
+        }
+        2 => {
+            Ok(Response::new(BoxBody::new(
+                Full::new(Box::new(CSS_2.as_bytes()) as _).map_err(|_| todo!()),
+            )))
+        }
+        _ => {
+            eprintln!("Skill issue");
+            Ok(Response::new(BoxBody::new(
+                Full::new(Box::new(NOT_FOUND.as_bytes()) as _).map_err(|_| todo!()),
+            )))
+        }
+    }
+}
 
 fn not_found() -> Result<Response<MyBody>, hyper::Error> {
     let mut resp = Response::new(BoxBody::new(
@@ -202,7 +241,7 @@ fn database() -> sled::Result<Db> {
 
 #[tokio::main]
 async fn main() {
-    println!("Hello, world!");
+    println!("Discord stacked meme generator running on port {}", 4312);
     let addr = SocketAddr::from(([127, 0, 0, 1], 4312));
     let db: &'static Db = Box::leak(Box::new(database().expect("Unable to open DB")));
 
